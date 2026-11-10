@@ -1,0 +1,13 @@
+# Fichiers système
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Éditeurs
+.vscode/
+.idea/
+
+# Archives volumineuses
+*.rar
+*.zip
+*.7z

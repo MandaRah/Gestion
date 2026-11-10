@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Application de gestion financière personnelle : comptes, transactions, budgets, objectifs, échéances, rapports et prévisions.">
+  <meta name="color-scheme" content="light dark">
+  <title>Gestion financière</title>
+
+  <!-- Applique le thème enregistré avant l'affichage (évite un flash de thème clair). -->
+  <script>
+    (function () {
+      var theme = 'light';
+      try {
+        var saved = JSON.parse(window.localStorage.getItem('financeAppData') || 'null');
+        if (saved && saved.settings && (saved.settings.theme === 'dark' || saved.settings.theme === 'light')) {
+          theme = saved.settings.theme;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          theme = 'dark';
+        }
+      } catch (error) { /* stockage indisponible : thème clair par défaut */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23256abf'/%3E%3Cpath d='M15 22a6 6 0 0 1 6-6h24v8H21a2 2 0 0 0 0 4h28v20a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6z' fill='white'/%3E%3Ccircle cx='42' cy='40' r='3.5' fill='%23256abf'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js est chargé de façon asynchrone : l'application fonctionne même sans connexion. -->
+  <script id="chartjs-script" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" async crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Aller au contenu principal</a>
+
+  <div class="app">
+    <!-- ================= Barre latérale ================= -->
+    <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
+      <div class="sidebar-header">
+        <a class="brand" href="#dashboard" aria-label="Gestion financière — tableau de bord">
+          <span class="brand-logo" aria-hidden="true"><i class="fa-solid fa-wallet"></i></span>
+          <span class="brand-name">Gestion<strong>Fi</strong></span>
+        </a>
+        <button type="button" class="icon-btn sidebar-close" data-action="close-sidebar" aria-label="Fermer le menu">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Sections">
+        <ul>
+          <li><a class="nav-link" href="#dashboard" data-view="dashboard" title="Tableau de bord"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i><span class="nav-label">Tableau de bord</span></a></li>
+          <li><a class="nav-link" href="#income" data-view="income" title="Revenus"><i class="fa-solid fa-arrow-trend-up nav-icon" aria-hidden="true"></i><span class="nav-label">Revenus</span></a></li>
+          <li><a class="nav-link" href="#expenses" data-view="expenses" title="Dépenses"><i class="fa-solid fa-arrow-trend-down nav-icon" aria-hidden="true"></i><span class="nav-label">Dépenses</span></a></li>
+          <li><a class="nav-link" href="#transactions" data-view="transactions" title="Transactions"><i class="fa-solid fa-right-left nav-icon" aria-hidden="true"></i><span class="nav-label">Transactions</span></a></li>
+          <li><a class="nav-link" href="#budgets" data-view="budgets" title="Budgets"><i class="fa-solid fa-chart-pie nav-icon" aria-hidden="true"></i><span class="nav-label">Budgets</span></a></li>
+          <li><a class="nav-link" href="#goals" data-view="goals" title="Objectifs"><i class="fa-solid fa-bullseye nav-icon" aria-hidden="true"></i><span class="nav-label">Objectifs</span></a></li>
+          <li><a class="nav-link" href="#accounts" data-view="accounts" title="Comptes"><i class="fa-solid fa-building-columns nav-icon" aria-hidden="true"></i><span class="nav-label">Comptes</span></a></li>
+          <li><a class="nav-link" href="#categories" data-view="categories" title="Catégories"><i class="fa-solid fa-folder-open nav-icon" aria-hidden="true"></i><span class="nav-label">Catégories</span></a></li>
+          <li><a class="nav-link" href="#reports" data-view="reports" title="Rapports"><i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i><span class="nav-label">Rapports</span></a></li>
+          <li><a class="nav-link" href="#forecast" data-view="forecast" title="Prévisions"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i><span class="nav-label">Prévisions</span></a></li>
+          <li><a class="nav-link" href="#bills" data-view="bills" title="Échéances"><i class="fa-solid fa-file-invoice-dollar nav-icon" aria-hidden="true"></i><span class="nav-label">Échéances</span><span class="nav-badge" id="nav-badge-bills" hidden>0</span></a></li>
+          <li><a class="nav-link" href="#settings" data-view="settings" title="Paramètres"><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i><span class="nav-label">Paramètres</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p class="sidebar-section-title">Données</p>
+        <button type="button" class="nav-link nav-button" data-action="export-data" title="Exporter les données"><i class="fa-solid fa-download nav-icon" aria-hidden="true"></i><span class="nav-label">Exporter les données</span></button>
+        <button type="button" class="nav-link nav-button" data-action="import-data" title="Importer les données"><i class="fa-solid fa-upload nav-icon" aria-hidden="true"></i><span class="nav-label">Importer les données</span></button>
+        <button type="button" class="nav-link nav-button nav-danger" data-action="reset-data" title="Réinitialiser les données"><i class="fa-solid fa-rotate-left nav-icon" aria-hidden="true"></i><span class="nav-label">Réinitialiser les données</span></button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" data-action="close-sidebar" aria-hidden="true"></div>
+
+    <!-- ================= Zone principale ================= -->
+    <div class="main">
+      <header class="topbar">
+        <button type="button" class="icon-btn menu-toggle" id="menu-toggle" data-action="toggle-sidebar" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+
+        <div class="global-search" role="search">
+          <label for="global-search-input" class="sr-only">Recherche globale</label>
+          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+          <input id="global-search-input" class="search-input" type="search" placeholder="Rechercher une transaction, un compte, un objectif…" autocomplete="off"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results">
+          <kbd class="search-kbd" aria-hidden="true">/</kbd>
+          <div id="search-results" class="search-results" role="listbox" aria-label="Résultats de recherche" hidden></div>
+        </div>
+
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-primary topbar-new" data-action="new-transaction" aria-label="Nouvelle transaction">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i><span>Nouvelle transaction</span>
+          </button>
+          <button type="button" class="icon-btn" id="theme-toggle" data-action="toggle-theme" aria-label="Activer le mode sombre" title="Mode sombre">
+            <i class="fa-solid fa-moon" aria-hidden="true"></i>
+          </button>
+          <div class="notifications">
+            <button type="button" class="icon-btn" id="alerts-toggle" data-action="toggle-alerts" aria-label="Alertes" aria-expanded="false" aria-controls="alerts-panel" title="Alertes">
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+              <span class="badge-count" id="alerts-count" hidden>0</span>
+            </button>
+            <div class="alerts-panel" id="alerts-panel" role="region" aria-label="Alertes" hidden></div>
+          </div>
+          <button type="button" class="user-chip" data-action="navigate" data-view="settings" title="Profil et paramètres">
+            <span class="avatar" id="user-avatar" aria-hidden="true">U</span>
+            <span class="user-name" id="user-name">Mon profil</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="main-content" class="content" tabindex="-1">
+        <section class="view" id="view-dashboard" data-view-section="dashboard" aria-label="Tableau de bord" hidden></section>
+        <section class="view" id="view-income" data-view-section="income" aria-label="Revenus" hidden></section>
+        <section class="view" id="view-expenses" data-view-section="expenses" aria-label="Dépenses" hidden></section>
+        <section class="view" id="view-transactions" data-view-section="transactions" aria-label="Transactions" hidden></section>
+        <section class="view" id="view-budgets" data-view-section="budgets" aria-label="Budgets" hidden></section>
+        <section class="view" id="view-goals" data-view-section="goals" aria-label="Objectifs" hidden></section>
+        <section class="view" id="view-accounts" data-view-section="accounts" aria-label="Comptes" hidden></section>
+        <section class="view" id="view-categories" data-view-section="categories" aria-label="Catégories" hidden></section>
+        <section class="view" id="view-reports" data-view-section="reports" aria-label="Rapports" hidden></section>
+        <section class="view" id="view-forecast" data-view-section="forecast" aria-label="Prévisions" hidden></section>
+        <section class="view" id="view-bills" data-view-section="bills" aria-label="Échéances" hidden></section>
+        <section class="view" id="view-settings" data-view-section="settings" aria-label="Paramètres" hidden></section>
+
+        <noscript>
+          <div class="card noscript">JavaScript est nécessaire pour utiliser cette application. Activez-le dans votre navigateur puis rechargez la page.</div>
+        </noscript>
+      </main>
+    </div>
+  </div>
+
+  <!-- Conteneurs des modales et des notifications -->
+  <div id="modal-root"></div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <input type="file" id="import-file-input" accept="application/json,.json" hidden>
+
+  <!-- Modules de l'application (ordre de chargement important) -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/calculations.js"></script>
+  <script src="js/recurring.js"></script>
+  <script src="js/demo.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/importexport.js"></script>
+  <script src="js/forms.js"></script>
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/transactions.js"></script>
+  <script src="js/views/income.js"></script>
+  <script src="js/views/expenses.js"></script>
+  <script src="js/views/budgets.js"></script>
+  <script src="js/views/goals.js"></script>
+  <script src="js/views/accounts.js"></script>
+  <script src="js/views/categories.js"></script>
+  <script src="js/views/reports.js"></script>
+  <script src="js/views/forecast.js"></script>
+  <script src="js/views/bills.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
