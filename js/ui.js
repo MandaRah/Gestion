@@ -22,6 +22,7 @@ const viewState = {
     sort: { key: 'date', direction: 'desc' },
     page: 1,
     pageSize: 25,
+    filtersOpen: false,
   },
   budgets: { month: null },
   categories: { tab: 'expense' },

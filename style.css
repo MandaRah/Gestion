@@ -1702,6 +1702,11 @@ th.text-right .th-sort {
   align-items: flex-end;
 }
 
+/* Bouton d'ouverture des filtres : visible uniquement sur mobile. */
+.filters-toggle {
+  display: none;
+}
+
 .filters-grid .period-picker .input {
   min-height: 42px;
 }
@@ -2852,6 +2857,7 @@ button.list-row:hover {
 
 .category-card .row-actions {
   justify-content: flex-end;
+  margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid var(--border);
 }
@@ -3423,6 +3429,15 @@ button.list-row:hover {
   .table-responsive tr.is-overdue {
     box-shadow: inset 3px 0 0 var(--status-critical);
   }
+
+  /* En mode carte, la teinte « en attente » s'applique à la carte entière. */
+  .table-responsive tr.is-pending {
+    background: color-mix(in srgb, var(--status-warning) 7%, transparent);
+  }
+
+  .table-responsive tr.is-pending td {
+    background: transparent;
+  }
 }
 
 @media (max-width: 960px) {
@@ -3611,6 +3626,28 @@ button.list-row:hover {
     grid-column: 1 / -1;
   }
 
+  /* Filtres repliés : seule la recherche reste visible. */
+  .filters-toggle {
+    display: inline-flex;
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .filters-collapsible:not(.is-open) .filters-grid > .field:not(.field-search) {
+    display: none;
+  }
+
+  .filters-collapsible.is-open .filters-toggle {
+    border-color: var(--primary);
+    color: var(--primary-text);
+  }
+
+  .kpi-head .kpi-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
   .chart-box,
   .chart-box-lg {
     height: 240px;
@@ -3729,13 +3766,23 @@ button.list-row:hover {
   }
 }
 
+/* Petits téléphones : les grilles restent sur 2 colonnes, en plus compact. */
 @media (max-width: 420px) {
-  .kpi-grid,
-  .kpi-grid-3,
-  .kpi-grid-5,
-  .filters-grid,
-  .budget-summary-figures {
-    grid-template-columns: minmax(0, 1fr);
+  .kpi {
+    padding: 12px;
+  }
+
+  .kpi-value {
+    font-size: 17px;
+  }
+
+  .kpi-hero .kpi-value {
+    font-size: 30px;
+  }
+
+  .delta-label {
+    display: block;
+    width: 100%;
   }
 
   .segmented-option {

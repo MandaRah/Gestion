@@ -50,9 +50,10 @@ function renderTransactions(section) {
    -------------------------------------------------------------------------- */
 
 function transactionFiltersHtml() {
-  const filters = viewState.transactions.filters;
+  const state = viewState.transactions;
+  const filters = state.filters;
   const option = (value, label, selected) => html`<option value="${value}" ${value === selected ? raw('selected') : ''}>${label}</option>`;
-  return html`<section class="card filters-card" aria-label="Filtres des transactions">
+  return html`<section class="card filters-card filters-collapsible ${state.filtersOpen ? 'is-open' : ''}" id="tx-filters" aria-label="Filtres des transactions">
       <div class="filters-grid">
         <div class="field field-search">
           <label class="field-label" for="tx-search">Recherche instantanée</label>
@@ -61,6 +62,9 @@ function transactionFiltersHtml() {
             <input type="search" id="tx-search" class="input" value="${filters.search}" placeholder="Description, tag, montant…" autocomplete="off" data-input-action="tx-filter" data-filter="search">
           </div>
         </div>
+        <button type="button" class="btn btn-secondary filters-toggle" data-action="tx-toggle-filters" aria-expanded="${state.filtersOpen ? 'true' : 'false'}" aria-controls="tx-filters">
+          ${icon('fa-sliders')}<span data-filters-label>${filtersToggleLabel()}</span>
+        </button>
         <div class="field">
           <label class="field-label" for="tx-type">Type</label>
           <select id="tx-type" class="input" data-change-action="tx-filter" data-filter="type">
@@ -110,6 +114,18 @@ function transactionFiltersHtml() {
     </section>
     <div id="tx-summary" class="summary-strip" aria-live="polite"></div>
     <div id="tx-table-container"></div>`;
+}
+
+/** Nombre de filtres actifs hors recherche (affiché sur le bouton « Filtres » en mobile). */
+function countActiveTransactionFilters() {
+  const filters = viewState.transactions.filters;
+  return [filters.type, filters.categoryId, filters.accountId, filters.status, filters.minAmount, filters.maxAmount, filters.period.preset !== 'all']
+    .filter(Boolean).length;
+}
+
+function filtersToggleLabel() {
+  const count = countActiveTransactionFilters();
+  return `Filtres${count ? ` (${count} actif${count > 1 ? 's' : ''})` : ''}`;
 }
 
 function hasActiveTransactionFilters() {
@@ -202,6 +218,8 @@ function renderTransactionTable() {
 
   const resetButton = document.querySelector('[data-action="tx-reset-filters"]');
   if (resetButton) resetButton.disabled = !hasActiveTransactionFilters();
+  const filtersLabel = document.querySelector('[data-filters-label]');
+  if (filtersLabel) filtersLabel.textContent = filtersToggleLabel();
 
   if (!appData.transactions.length) {
     setHTML(container, html`<div class="card">${emptyState({ iconName: 'fa-receipt', title: 'Aucune transaction pour le moment.', text: 'Ajoutez votre premier revenu ou votre première dépense.', actionLabel: 'Ajouter une transaction', action: 'new-transaction' })}</div>`);
@@ -337,6 +355,13 @@ function recurringPanelHtml() {
    -------------------------------------------------------------------------- */
 
 registerActions({
+  'tx-toggle-filters': (element) => {
+    const state = viewState.transactions;
+    state.filtersOpen = !state.filtersOpen;
+    const card = document.getElementById('tx-filters');
+    if (card) card.classList.toggle('is-open', state.filtersOpen);
+    element.setAttribute('aria-expanded', String(state.filtersOpen));
+  },
   'tx-filter': (element, event) => {
     const key = element.dataset.filter;
     viewState.transactions.filters[key] = element.value;
